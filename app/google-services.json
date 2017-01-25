@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "211109104165",
+    "firebase_url": "https://rtek-voice.firebaseio.com",
+    "project_id": "rtek-voice",
+    "storage_bucket": "rtek-voice.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:211109104165:android:c368d17ceb0815c3",
+        "android_client_info": {
+          "package_name": "io.rtek.rtvoice"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "211109104165-tch5dret2b0ofu8utlq2903g4bpo5k9i.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "io.rtek.rtvoice",
+            "certificate_hash": "299A44190E76C5C7C0E7D010796C2381AB290055"
+          }
+        },
+        {
+          "client_id": "211109104165-kg1k6i5e8pf8rneciusml2f5639hkfcd.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDpb6yZCumzoepzjxS1QBaX_-5XjnEQkiI"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "211109104165-kg1k6i5e8pf8rneciusml2f5639hkfcd.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
