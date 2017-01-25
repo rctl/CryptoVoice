@@ -18,6 +18,7 @@ public interface IControlChannelListener {
     void callEnded(int number);
     void callStatusChanged(CallStatus status);
     void messageReceived(String message); //For debugging
+    void callSecure(boolean state);
     String getString(String key);
     void saveString(String key, String value);
     void ControlChannelConnected();

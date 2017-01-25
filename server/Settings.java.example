@@ -1,4 +1,5 @@
 //Rename this file to Settings.java
 public class Settings{
     public static String keyStorePassword = ""; //Replace this string with your keystore password
+    public static String rootPath = ""; //Replace this to change path of storage for numbers
 }

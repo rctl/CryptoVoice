@@ -243,6 +243,8 @@ public class Main extends AppCompatActivity implements IControlChannelListener{
         if(!wakeLock.isHeld()) {
             wakeLock.acquire();
         }
+        final TextView encrypted = (TextView) findViewById(R.id.textViewCallEncrypted);
+        encrypted.setVisibility(View.INVISIBLE);
 
     }
 
@@ -295,28 +297,6 @@ public class Main extends AppCompatActivity implements IControlChannelListener{
             InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
             imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
         }
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
-        }
-
-        return super.onOptionsItemSelected(item);
     }
 
     @Override
@@ -427,6 +407,18 @@ public class Main extends AppCompatActivity implements IControlChannelListener{
             }
         });
 
+    }
+
+    @Override
+    public void callSecure(final boolean state) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                final TextView encrypted = (TextView) findViewById(R.id.textViewCallEncrypted);
+                if(encrypted != null && state)
+                    encrypted.setVisibility(View.VISIBLE);
+            }
+        });
     }
 
     @Override

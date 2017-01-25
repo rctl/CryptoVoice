@@ -198,7 +198,14 @@ public class ControlChannel extends Thread implements ICallListener {
                     if(cmd.startsWith("LINK ")) {
                         int callerId = Integer.parseInt(cmd.split(" ")[1]);
                         listener.initializeCall(callerId);
-                        currentCall.start(server + ":" + cmd.split(" ")[2]);
+                        String key = "";
+                        if(cmd.split(" ").length == 4){
+                            key = cmd.split(" ")[3];
+                            listener.callSecure(true);
+                        }else{
+                            listener.callSecure(false);
+                        }
+                        currentCall.start(server + ":" + cmd.split(" ")[2], key);
                     }
                     if(cmd.startsWith("HANGUP ")){
                         int callerId = Integer.parseInt(cmd.split(" ")[1]);

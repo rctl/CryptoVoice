@@ -32,4 +32,15 @@
         android:id="@+id/progressBar2"
         android:layout_below="@+id/textView_CallStatus"
         android:layout_centerHorizontal="true" />
+
+    <TextView
+        android:text="Your call is encrypted"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="95dp"
+        android:textColor="#008000"
+        android:id="@+id/textViewCallEncrypted"
+        android:textAppearance="@android:style/TextAppearance.Material.Medium"
+        android:layout_above="@+id/buttonHangup"
+        android:layout_centerHorizontal="true" />
 </RelativeLayout>

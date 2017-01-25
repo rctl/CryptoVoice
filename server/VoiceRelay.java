@@ -22,31 +22,8 @@ public class VoiceRelay{
         System.out.println("Address 2: " + Integer.toString(sock2.getLocalPort()));
         port1 = sock1.getLocalPort();
         port2 = sock2.getLocalPort();
-        new Thread(new Runnable() {
-                @Override
-                public void run() {
-                     try{
-                        //Interconnect sockets
-                        Thread br1 = bridge(sock1, sock2);
-                        Thread br2 = bridge(sock2, sock1);
-                        //Block until call is closed down externally
-                        while(!closing){
-                            try
-                            {
-                                Thread.sleep(1000);
-                            }
-                            catch (Exception e)
-                            {
-                                e.printStackTrace();
-                            }
-                        }
-                        sock1.close();
-                        sock2.close();
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
-            }).start();
+        bridge(sock1, sock2);
+        bridge(sock2, sock1);
     }
 
     public void close(){
@@ -87,6 +64,7 @@ public class VoiceRelay{
                             e.printStackTrace();
                         }
                     }
+                    src.close();
                 }
         });
         br.start();

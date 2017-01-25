@@ -55,6 +55,7 @@
         android:text="Waiting for number"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:textColor="#008000"
         android:id="@+id/textView2"
         android:textAppearance="@android:style/TextAppearance.Material.Large"
         android:layout_below="@+id/textView4"
