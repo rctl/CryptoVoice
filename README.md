@@ -5,7 +5,7 @@ Server backend is written in java. App is also available in the Google Play Stor
 
 **License**
 
-This project is licensed under GNU AGPLv3. If you use this code you have to release your source code publically. 
+This project is licensed under GNU AGPLv3. If you use this code you have to release your source code publicly. 
 
 ### Setup
 
