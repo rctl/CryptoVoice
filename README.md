@@ -4,9 +4,10 @@ RTVOICE is an app offering real time voice communication over networking. Implem
 Server backend is written in java. App is also available in the Google Play Store.
 
 **License**
+
 This project is licensed under GNU AGPLv3. If you use this code you have to release your source code publically. 
 
-**App screens**
+### App screens
 
 ![Main screen](https://github.com/rctl/rtvoice/raw/master/docs/main.png)
 
