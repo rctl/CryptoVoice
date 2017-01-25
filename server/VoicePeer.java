@@ -3,15 +3,16 @@ import java.util.Random;
 import java.io.*;
 import java.security.SecureRandom;
 import java.math.BigInteger;
+import javax.net.ssl.*;
 
 public class VoicePeer extends Thread {
-    private Socket socket;
+    private SSLSocket socket;
     private int number = 0;
     private VoiceRelay relay;
     PrintWriter out;
     BufferedReader in;
     
-    public VoicePeer(Socket socket) {
+    public VoicePeer(SSLSocket socket) {
         this.socket = socket;
     }
     public void run() {

@@ -1,5 +1,12 @@
 package io.rtek.rtvoice;
 
+import android.support.v4.util.Pair;
+
+import java.security.KeyStore;
+
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.TrustManagerFactory;
+
 /**
  * Created by rctl on 2017-01-22.
  */
@@ -15,5 +22,6 @@ public interface IControlChannelListener {
     void saveString(String key, String value);
     void ControlChannelConnected();
     void ControlChannelDisconnected();
+    Pair<TrustManagerFactory, KeyManagerFactory> getTrustManagerFactory();
     String getGcmDeviceId();
 }

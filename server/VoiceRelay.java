@@ -40,8 +40,6 @@ public class VoiceRelay{
                                 e.printStackTrace();
                             }
                         }
-                        br1.stop();
-                        br2.stop();
                         sock1.close();
                         sock2.close();
                     } catch (Exception e) {
@@ -67,7 +65,7 @@ public class VoiceRelay{
                 @Override
                 public void run() {
                     //Always keep the relay open, this allows clients to reconnect
-                    while(true){
+                    while(!closing){
                         byte[] receiveData = new byte[2048];
                         try {
                             //Connect to first available peer

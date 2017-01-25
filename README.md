@@ -9,7 +9,15 @@ This project is licensed under GNU AGPLv3. If you use this code you have to rele
 
 ### Setup
 
-* Setup a server running the Switchboard found in *server/* folder
+**Follow these steps to setup a backend server (required for app to work) and to configure the android client to use your backend server**
+
+* Go into the server folder of the repository.
+* Generate server certificate with `keytool -genkey -keystore keystore.jks -keyalg RSA` (Save password used here)
+* Self sign server certificate with `keytool -selfcert -alias mykey -keystore keystore.jks -validity 3950`
+* Export certificate as crt file with `keytool -export -alias mykey -keystore keystore.jks -rfc -file server.crt`
+* Move certificate file into android asset folder with `mv server.crt ../app/main/assets/`
+* Move the Settings.java.example file in server folder to Settings.java and edit the file with your keystore password used in earlier steps
+* Compile and run the server (prefferably at a publicly accessiable server) `javac *.java && java Switchboard`
 * Make sure server is accessable and no ports are being blocked
 * Go into *app/src/main/java/io/rtek/rtvoice/* and move **Settings.java.example** to **Settings.java**
 * **Change settings in Settings.java to reflect your server ip address**

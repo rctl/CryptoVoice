@@ -1,0 +1,4 @@
+//Rename this file to Settings.java
+public class Settings{
+    public static String keyStorePassword = ""; //Replace this string with your keystore password
+}

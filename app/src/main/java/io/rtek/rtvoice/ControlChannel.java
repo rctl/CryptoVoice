@@ -9,16 +9,30 @@ import android.media.audiofx.AcousticEchoCanceler;
 import android.media.audiofx.AutomaticGainControl;
 import android.media.audiofx.NoiseSuppressor;
 import android.os.AsyncTask;
+import android.support.v4.util.Pair;
 import android.util.Log;
+
+import org.apache.http.conn.ssl.SSLSocketFactory;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.security.KeyStore;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509TrustManager;
 
 /**
  * Created by rctl on 2017-01-22.
@@ -119,7 +133,14 @@ public class ControlChannel extends Thread implements ICallListener {
         while(!isCancelled()){
             try {
                 listener.ControlChannelDisconnected();
-                socket = new Socket(this.server, 1337);
+                Pair<TrustManagerFactory, KeyManagerFactory> km = listener.getTrustManagerFactory();
+                if(km == null || km.first == null || km.second == null){
+                    throw new Exception("No valid truststore provided");
+                }
+                SSLContext context = SSLContext.getInstance("SSL");
+                KeyManager[] keymanagers =  km.second.getKeyManagers();
+                context.init(keymanagers, km.first.getTrustManagers(), new SecureRandom());
+                socket = context.getSocketFactory().createSocket(this.server, 1338);
                 Log.w("CC", "Connecting");
                 while(!socket.isConnected()){}
                 listener.ControlChannelConnected();
