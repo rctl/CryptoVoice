@@ -10,7 +10,7 @@ public class VoicePeer extends Thread {
     private VoiceRelay relay;
     PrintWriter out;
     BufferedReader in;
-    public static String REQUEST_URL = "https://android.googleapis.com/gcm/send";
+    
     public VoicePeer(Socket socket) {
         this.socket = socket;
     }
