@@ -56,11 +56,12 @@ public class Main extends AppCompatActivity implements IControlChannelListener{
     Snackbar sb;
     ControlChannel cc;
     int callerId = 0;
-    String server = "207.154.204.60";
+    String server = Settings.server;
     final Activity main = this;
     private BroadcastReceiver receiver;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
         super.onCreate(savedInstanceState);
         cc = new ControlChannel(this, server);
         cc.start();
