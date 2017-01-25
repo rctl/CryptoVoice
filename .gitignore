@@ -1,4 +1,6 @@
 Settings.java
+*.class
+*.jks
 *.iml
 .gradle
 /local.properties
