@@ -1,6 +1,7 @@
-## RTVOICE - Real time vocie communication
 
-RTVOICE is an app offering real time voice communication over networking. Implemented together with a cutom dialing protocol.
+## CryptoVoice- Real time encrypted vocie communication
+
+CryptoVoice is an app offering real time encrypted voice communication over networking. Implemented together with a cutom dialing and voice streaming protocol encrypted with strong AES cipher. Dialing channel uses TLS encryption with server validation to prevent MITM attacks.
 Server backend is written in java. App is also available in the Google Play Store.
 
 **License**
