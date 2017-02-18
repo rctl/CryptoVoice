@@ -4,6 +4,8 @@
 CryptoVoice is an app offering real time encrypted voice communication over networking. Implemented together with a cutom dialing and voice streaming protocol encrypted with strong AES cipher. Dialing channel uses TLS encryption with server validation to prevent MITM attacks.
 Server backend is written in java. App is also available in the Google Play Store.
 
+For more details please read [my blog post on the project.](http://blog.rasmusj.se/2017/02/cryptovoice-encrypted-voice-calls.html)
+
 **License**
 
 This project is licensed under GNU AGPLv3. If you use this code you have to release your source code publicly. 
