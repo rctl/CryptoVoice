@@ -62,7 +62,7 @@ public class Main extends AppCompatActivity implements IControlChannelListener{
     private Ringtone r;
     MediaPlayer dialingSound;
 
-
+    AssetFileDescriptor afd;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -111,12 +111,12 @@ public class Main extends AppCompatActivity implements IControlChannelListener{
         registerReceiver(receiver, filter);
         try {
             dialingSound = new MediaPlayer();
-            AssetFileDescriptor afd  = getActivity().getAssets().openFd("dialing.wav");
+            afd  = getActivity().getAssets().openFd("dialing.wav");
             dialingSound.setLooping(true);
             dialingSound.setDataSource(afd.getFileDescriptor(),afd.getStartOffset(),afd.getLength());
             dialingSound.setAudioStreamType(AudioManager.STREAM_VOICE_CALL);
             dialingSound.setVolume(0.3F,0.3F);
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -171,7 +171,11 @@ public class Main extends AppCompatActivity implements IControlChannelListener{
                                 mp.start();
                             }
                         });
-                        dialingSound.prepareAsync();
+                        try {
+                            dialingSound.prepareAsync();
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
                     }
                     setInCallView();
                 }
