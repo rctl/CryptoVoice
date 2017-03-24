@@ -15,6 +15,8 @@ import android.database.Cursor;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.media.Ringtone;
+import android.os.Vibrator;
+
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
@@ -59,6 +61,7 @@ public class Main extends AppCompatActivity implements IControlChannelListener{
     private static int field = 0x00000020;
     private Ringtone r;
     MediaPlayer dialingSound;
+
 
 
     @Override
@@ -262,7 +265,20 @@ public class Main extends AppCompatActivity implements IControlChannelListener{
         final Uri notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
         r = RingtoneManager.getRingtone(getApplicationContext(), notification);
         r.play();
-
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    while(r.isPlaying()) {
+                        Vibrator v = (Vibrator) main.getSystemService(Context.VIBRATOR_SERVICE);
+                        v.vibrate(1000);
+                        Thread.sleep(5000);
+                    }
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
         if(isAppIsInBackground(this)) {
             Intent intent = new Intent(this, Main.class);
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
