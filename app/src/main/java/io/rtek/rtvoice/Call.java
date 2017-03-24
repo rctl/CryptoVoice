@@ -12,6 +12,7 @@ import android.media.audiofx.NoiseSuppressor;
 import android.util.Log;
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
@@ -57,7 +58,7 @@ public class Call extends Thread {
     //Interrupt
     private boolean closing = false;
     private boolean secure = false;
-    private String key;
+    private byte[] key;
 
 
 
@@ -65,6 +66,16 @@ public class Call extends Thread {
         this.listener = listener;
         this.localCallerId = localCallerId;
         this.remoteCallerId = remoteCallerId;
+    }
+
+    public boolean hasKey(){
+        return key != null;
+    }
+
+    public byte[] generateKey() throws Exception{
+        SecureRandom random = new SecureRandom();
+        this.key = getRawKey(new BigInteger(130, random).toByteArray());
+        return this.key;
     }
 
     public void close(){
@@ -87,12 +98,31 @@ public class Call extends Thread {
         listener.callEnded();
     }
 
-    public void start(String server, String encryptionKey){
+    //Supply new key
+    public void start(String server, String encryptionKey) throws Exception{
         this.server = server;
-        if(!encryptionKey.isEmpty()){
-            secure = true;
-            this.key = encryptionKey;
+        if(encryptionKey.isEmpty()){
+            throw new Exception("No encryption key supplied!");
         }
+        this.secure = true;
+        this.key = hexStringToByteArray(encryptionKey);
+        start();
+    }
+
+    //Use previously generated key
+    public void start(String server) throws Exception{
+        this.server = server;
+        if(key == null){
+            throw new Exception("No encryption key generated!");
+        }
+        this.secure = true;
+        start();
+    }
+
+    //Legacy
+    public void startWithoutEncryption(String server){
+        this.server = server;
+        this.secure = false;
         start();
     }
 
@@ -141,7 +171,7 @@ public class Call extends Thread {
                                     DatagramPacket receivePacket = new DatagramPacket(receiveBuffer_Encrypted, receiveBuffer_Encrypted.length);
                                     sock.receive(receivePacket);
                                     Log.w("VOICE", "Packet of " + receivePacket.getLength() + " was received from " + receivePacket.getAddress());
-                                    receiveBuffer = decrypt(hexStringToByteArray(key), receiveBuffer_Encrypted);
+                                    receiveBuffer = decrypt(key, receiveBuffer_Encrypted);
                                     track.write(receiveBuffer, 0, receiveBuffer.length);
                                 }else {
                                     DatagramPacket receivePacket = new DatagramPacket(receiveBuffer, receiveBuffer.length);
@@ -176,7 +206,7 @@ public class Call extends Thread {
                             return;
                         int read = recorder.read(transmittBuffer, 0, transmittBuffer.length);
                         if(secure){
-                            transmittBuffer_Encrypted = encrypt(hexStringToByteArray(key), transmittBuffer);
+                            transmittBuffer_Encrypted = encrypt(key, transmittBuffer);
                             DatagramPacket packet = new DatagramPacket(transmittBuffer_Encrypted, transmittBuffer_Encrypted.length);
                             sock.send(packet);
                         }else{
@@ -210,14 +240,7 @@ public class Call extends Thread {
         SecretKeySpec skeySpec = new SecretKeySpec(raw, "AES");
         Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
         cipher.init(Cipher.ENCRYPT_MODE, skeySpec);
-        byte[] data = cipher.doFinal(clear);
-        byte[] iv = cipher.getIV();
-        byte[] packet = new byte[data.length+iv.length];
-        for (int i = 0; i < iv.length; i++)
-            packet[i] = iv[i];
-        for (int i = 0; i < data.length; i++)
-            packet[iv.length+i] = data[i];
-        return data;
+        return cipher.doFinal(clear);
     }
 
     private byte[] decrypt(byte[] raw, byte[] encrypted) throws Exception {
@@ -225,8 +248,7 @@ public class Call extends Thread {
         Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
         IvParameterSpec ivspec = new IvParameterSpec(encrypted, 0, 16);
         cipher.init(Cipher.DECRYPT_MODE, skeySpec, ivspec);
-        byte[] decrypted = cipher.doFinal(encrypted, 16, encrypted.length-16);
-        return decrypted;
+        return cipher.doFinal(encrypted, 16, encrypted.length-16);
     }
 
     public static byte[] hexStringToByteArray(String s) {
@@ -237,5 +259,14 @@ public class Call extends Thread {
                     + Character.digit(s.charAt(i+1), 16));
         }
         return data;
+    }
+    private static byte[] getRawKey(byte[] seed) throws Exception {
+        KeyGenerator kgen = KeyGenerator.getInstance("AES");
+        SecureRandom sr = SecureRandom.getInstance("SHA1PRNG");
+        sr.setSeed(seed);
+        kgen.init(128, sr);
+        SecretKey skey = kgen.generateKey();
+        byte[] raw = skey.getEncoded();
+        return raw;
     }
 }

@@ -3,7 +3,6 @@ package io.rtek.rtvoice;
 import android.Manifest;
 import android.app.Activity;
 import android.app.ActivityManager;
-import android.app.IntentService;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -11,13 +10,13 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.res.AssetFileDescriptor;
 import android.database.Cursor;
-import android.graphics.drawable.Icon;
 import android.media.AudioManager;
+import android.media.MediaPlayer;
 import android.media.Ringtone;
 import android.media.RingtoneManager;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.PowerManager;
@@ -28,53 +27,44 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.util.Pair;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.View;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.WindowManager;
-import android.view.accessibility.AccessibilityNodeInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
-import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
-
-import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.GooglePlayServicesUtil;
-import com.google.android.gms.gcm.GcmListenerService;
 import com.google.android.gms.gcm.GoogleCloudMessaging;
-import com.google.android.gms.iid.InstanceID;
-
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.KeyStore;
-import java.security.KeyStoreException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateFactory;
 import java.util.List;
-
-import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManagerFactory;
 
 public class Main extends AppCompatActivity implements IControlChannelListener{
 
-    Snackbar sb;
-    ControlChannel cc;
-    int callerId = 0;
-    String server = Settings.server;
-    final Activity main = this;
+    private Snackbar sb;
+    private ControlChannel cc;
+    private final Activity main = this;
     private BroadcastReceiver receiver;
+    private static final int RESULT_PICK_CONTACT = 10;
+    private PowerManager powerManager;
+    private PowerManager.WakeLock wakeLock;
+    private static int field = 0x00000020;
+    private Ringtone r;
+    MediaPlayer dialingSound;
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-
         super.onCreate(savedInstanceState);
-        cc = new ControlChannel(this, server);
+        cc = new ControlChannel(this, Settings.server);
         cc.start();
 
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED);
@@ -92,15 +82,12 @@ public class Main extends AppCompatActivity implements IControlChannelListener{
         wakeLock = powerManager.newWakeLock(field, getLocalClassName());
 
         setMainView();
-        //Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-        //setSupportActionBar(toolbar);
 
         AudioManager m_amAudioManager;
         m_amAudioManager = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
         m_amAudioManager.setMode(AudioManager.MODE_IN_CALL);
         m_amAudioManager.setSpeakerphoneOn(false);
         m_amAudioManager.setRouting(AudioManager.MODE_NORMAL,AudioManager.ROUTE_EARPIECE, AudioManager.ROUTE_ALL);
-
         requestRecordAudioPermission();
 
         this.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE|WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
@@ -119,6 +106,16 @@ public class Main extends AppCompatActivity implements IControlChannelListener{
             }
         };
         registerReceiver(receiver, filter);
+        try {
+            dialingSound = new MediaPlayer();
+            AssetFileDescriptor afd  = getActivity().getAssets().openFd("dialing.wav");
+            dialingSound.setLooping(true);
+            dialingSound.setDataSource(afd.getFileDescriptor(),afd.getStartOffset(),afd.getLength());
+            dialingSound.setAudioStreamType(AudioManager.STREAM_VOICE_CALL);
+            dialingSound.setVolume(0.3F,0.3F);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -141,7 +138,7 @@ public class Main extends AppCompatActivity implements IControlChannelListener{
         cc.close();
         super.onDestroy();
     }
-    private static final int RESULT_PICK_CONTACT = 10;
+
     private void setMainView(){
         setContentView(R.layout.activity_main);
         TextView tv = (TextView) findViewById(R.id.textView2);
@@ -152,6 +149,8 @@ public class Main extends AppCompatActivity implements IControlChannelListener{
         sb = Snackbar.make(findViewById(R.id.content_main), "Unknown error", Snackbar.LENGTH_INDEFINITE);
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         final IControlChannelListener main = this;
+        if(dialingSound != null)
+            dialingSound.stop();
         tv.setText(Integer.toString(cc.getNumber()));
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -162,6 +161,15 @@ public class Main extends AppCompatActivity implements IControlChannelListener{
                 }
                 if (number.getText().length() != 0){
                     cc.dial(Integer.parseInt(number.getText().toString()));
+                    if (dialingSound != null) {
+                        dialingSound.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+                            @Override
+                            public void onPrepared(MediaPlayer mp) {
+                                mp.start();
+                            }
+                        });
+                        dialingSound.prepareAsync();
+                    }
                     setInCallView();
                 }
             }
@@ -223,13 +231,6 @@ public class Main extends AppCompatActivity implements IControlChannelListener{
         hideKeyboard();
     }
 
-    int createIncoming = 0;
-
-
-    private PowerManager powerManager;
-    private PowerManager.WakeLock wakeLock;
-    private int field = 0x00000020;
-
     private void setInCallView(){
         hideKeyboard();
         setContentView(R.layout.in_call);
@@ -237,6 +238,8 @@ public class Main extends AppCompatActivity implements IControlChannelListener{
         hangupBtn.setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View view) {
+                if(dialingSound != null)
+                    dialingSound.stop();
                 cc.hangup();
             }
         });
@@ -252,7 +255,7 @@ public class Main extends AppCompatActivity implements IControlChannelListener{
         hideKeyboard();
         setContentView(R.layout.connecting);
     }
-    Ringtone r;
+
     private void setIncomingCallView(final int number){
         hideKeyboard();
         setContentView(R.layout.incoming_call);
@@ -378,6 +381,8 @@ public class Main extends AppCompatActivity implements IControlChannelListener{
                         case CONNECTED:
                             tv.setText("Ongoing call");
                             pb.setVisibility(View.INVISIBLE);
+                            if(dialingSound != null)
+                                dialingSound.stop();
                             break;
                         case ERROR:
                             setMainView();
@@ -459,28 +464,14 @@ public class Main extends AppCompatActivity implements IControlChannelListener{
     }
 
     @Override
-    public Pair<TrustManagerFactory, KeyManagerFactory> getTrustManagerFactory() {
+    public InputStream getServerCertificate() {
         try {
-            KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
-            trustStore.load(null);
-            InputStream stream = this.getAssets().open("server.crt");
-            BufferedInputStream bis = new BufferedInputStream(stream);
-            CertificateFactory cf = CertificateFactory.getInstance("X.509");
-            while (bis.available() > 0) {
-                Certificate cert = cf.generateCertificate(bis);
-                trustStore.setCertificateEntry("cert" + bis.available(), cert);
-            }
-            KeyManagerFactory kmfactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-            kmfactory.init(trustStore, "1234".toCharArray());
-            TrustManagerFactory tmf=TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-            tmf.init(trustStore);
-            return new Pair<>(tmf, kmfactory);
-        } catch (Exception e) {
+            return this.getAssets().open("server.crt");
+        } catch (IOException e) {
             e.printStackTrace();
+            return null;
         }
-        return null;
     }
-
 
     @Override
     public String getGcmDeviceId() {
