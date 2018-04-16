@@ -10,6 +10,8 @@ For more details please read [my blog post on the project.](http://blog.rasmusj.
 
 This project is licensed under GNU AGPLv3. If you use this code you have to release your source code publicly. 
 
+`This project is no longer maintained. Feel free to reach out if you need help adapting the code for your setting.`
+
 ### Setup
 
 **Follow these steps to setup a backend server (required for app to work) and to configure the android client to use your backend server**
