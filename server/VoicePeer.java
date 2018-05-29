@@ -13,41 +13,61 @@ import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
+import java.security.KeyFactory;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.KeyStore;
+import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.SecureRandom;
+import java.security.Signature;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateFactory;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
+import javax.crypto.Cipher;
+import javax.crypto.NoSuchPaddingException;
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509TrustManager;
 
 
 public class VoicePeer extends Thread {
     private SSLSocket socket;
-    private Socket unsafeSocket;
     private int number = 0;
     private VoiceRelay relay;
+    private PublicKey publicKey;
     PrintWriter out;
     BufferedReader in;
+    private String authKey;
     
     public VoicePeer(SSLSocket socket) {
         this.socket = socket;
     }
-    public VoicePeer(Socket socket) {
-        this.unsafeSocket = socket;
-    }
 
-    public boolean secure(){
-        return socket != null;
-    }
     public void run() {
 
         try {
-            if (socket == null){
-                //Use unsafe socket if safe is unavailable (old clients)
-                out = new PrintWriter(unsafeSocket.getOutputStream(), true);
-                in = new BufferedReader(new InputStreamReader(unsafeSocket.getInputStream()));
-            }else{
-                 out = new PrintWriter(socket.getOutputStream(), true);
-                 in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            }
+            out = new PrintWriter(socket.getOutputStream(), true);
+            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             String inputLine, outputLine;
             while ((inputLine = in.readLine()) != null) {
                 System.out.println(inputLine);
-                if(inputLine.equals("REQUEST NUMBER")){
+
+                //Client requested some auth key data, save this and transmitt
+                if (inputLine.equals("AUTH")){
+                    SecureRandom random = new SecureRandom();
+                    this.authKey = new BigInteger(130, random).toString(32);
+                    out.println(this.authKey);
+                    continue;
+                }
+
+                if(inputLine.startsWith("REQUEST NUMBER")){
+                    boolean rsaSupport = inputLine.split(" ").length > 2;
                     Random rand = new Random();
                     try{
                         boolean exists = true;
@@ -59,15 +79,21 @@ public class VoicePeer extends Thread {
                         }
                         SecureRandom random = new SecureRandom();
                         PrintWriter writer = new PrintWriter(Settings.rootPath +Integer.toString(this.number) + ".rtv", "UTF-8");
-                        String key = new BigInteger(130, random).toString(32);
-                        writer.println("key=" + key);
+                        if (!rsaSupport){
+                            String key = new BigInteger(130, random).toString(32);
+                            writer.println("key=" + key);
+                            out.println("NUMBER " + Integer.toString(this.number) + " " + key);
+                        }
+                        if(rsaSupport){
+                            writer.println("publickey=" + inputLine.split(" ")[2]);
+                            setPublicKey(inputLine.split(" ")[2]);
+                            System.out.println("NUMBER " + Integer.toString(this.number));
+                            out.println("NUMBER " + Integer.toString(this.number));
+                        }
                         writer.close();
-                        //Associate this peer with the server
                         Switchboard.peers.put(this.number, this);
-                        out.println("NUMBER " + Integer.toString(this.number) + " " + key);
-                        System.out.println("NUMBER " + Integer.toString(this.number));
-                    } catch (IOException e) {
-                    // do something
+                    } catch (Exception e) {
+                        e.printStackTrace();
                     }
                 }else if (inputLine.startsWith("REGISTER ")){
                     try {
@@ -80,6 +106,14 @@ public class VoicePeer extends Thread {
                         }
                         BufferedReader reader = new BufferedReader(new FileReader(file));
                         String text = null;
+                        //Check for public key and denie register if exist
+                        while ((text = reader.readLine()) != null) {
+                            if (text.startsWith("publickey=")){
+                                out.println("USE PUBLIC KEY");
+                                continue;
+                            }
+                        }
+                        reader = new BufferedReader(new FileReader(file));
                         while ((text = reader.readLine()) != null) {
                             if (text.startsWith("key=")){
                                 if (!text.split("=")[1].equals(key)){
@@ -87,13 +121,46 @@ public class VoicePeer extends Thread {
                                 }else{
                                     Switchboard.peers.put(this.number, this);
                                     out.println("ASSOCIATED");
-                                    System.out.println("ASSOCIATED " + Integer.toString(this.number) + " " + ((socket == null) ? "INSECURE" : "SECURE"));
+                                    System.out.println("ASSOCIATED " + Integer.toString(this.number) + " SECURE");
+                                    if (inputLine.split(" ").length == 4){
+                                        System.out.println("ASSOCIATED " + Integer.toString(this.number) + " SECURE AND UPGRADED");
+                                        Writer output = new BufferedWriter(new FileWriter(Settings.rootPath + Integer.toString(this.number) + ".rtv", true));
+                                        output.append("\npublickey=" + inputLine.split(" ")[3]);
+                                        output.close();
+                                    }
                                 }
-                                break;
                             }
                         }
                     } catch (Exception e) {
                         out.println("INVALID NUMBER FORMAT");
+                        continue;
+                    }
+                }else if (inputLine.startsWith("SIG ")){
+                    try {
+                        this.number = Integer.parseInt(inputLine.split(" ")[1]);
+                        File file = new File(Settings.rootPath + Integer.toString(this.number) + ".rtv");
+                        if (!file.exists()){
+                            out.println("UNKNOWN NUMBER");
+                            continue;
+                        }
+                        BufferedReader reader = new BufferedReader(new FileReader(file));
+                        String text = null;
+                        while ((text = reader.readLine()) != null) {
+                            if (text.startsWith("publickey=")){
+                                    setPublicKey(text.split("=")[1]);
+                            }
+                        }
+                        if (verifyData(this.authKey, inputLine.split(" ")[2])){
+                            Switchboard.peers.put(this.number, this);
+                            out.println("ASSOCIATED");
+                            System.out.println("ASSOCIATED " + Integer.toString(this.number) + " SECURE" + " RSA");
+                        }else{
+                            out.println("INVALID KEY");
+                             System.out.println("RSA VALIDATION FAILED FOR " + Integer.toString(this.number));
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        out.println("SERVER ERROR");
                         continue;
                     }
                 }
@@ -165,14 +232,9 @@ public class VoicePeer extends Thread {
                         this.relay = callRelay;
                         dstPeer.relay = callRelay;
                         SecureRandom random = new SecureRandom();
-                        String key = new BigInteger(130, random).toString();
-                        if(dstPeer.secure() && this.secure()){
-                            dstPeer.out.println("LINK " + Integer.toString(this.number) + " " + Integer.toString(callRelay.getPair2Port()) + " " + bytesToHex(getRawKey(key.getBytes())));
-                            out.println("LINK " + Integer.toString(dstPeer.number) + " " + Integer.toString(callRelay.getPair1Port()) + " " + bytesToHex(getRawKey(key.getBytes())));
-                        }else{
-                            dstPeer.out.println("LINK " + Integer.toString(this.number) + " " + Integer.toString(callRelay.getPair2Port()));
-                            out.println("LINK " + Integer.toString(dstPeer.number) + " " + Integer.toString(callRelay.getPair1Port()));
-                        }
+                        String key = bytesToHex(getRawKey(new BigInteger(130, random).toString().getBytes()));
+                        dstPeer.out.println("LINK " + Integer.toString(this.number) + " " + Integer.toString(callRelay.getPair2Port()) + " " + key);
+                        out.println("LINK " + Integer.toString(dstPeer.number) + " " + Integer.toString(callRelay.getPair1Port()) + " " + key);
                     } catch (Exception e) {
                         out.println("ASSOCIATION ERROR");
                     }
@@ -244,8 +306,39 @@ public class VoicePeer extends Thread {
             Switchboard.peers.remove(this.number);
     }
 
-    final protected static char[] hexArray = "0123456789ABCDEF".toCharArray();
+    public boolean verifyData(String message, String signature) throws Exception{
+        byte[] data = message.getBytes();
+        Signature sig = Signature.getInstance("SHA256withRSA");
+        sig.initVerify(this.publicKey);
+        sig.update(data);
+        return sig.verify(hexStringToByteArray(signature));
+    }
+
+    public String encryptRSA(String message) throws Exception{
+        Cipher cipher = Cipher.getInstance("RSA");
+        cipher.init(Cipher.ENCRYPT_MODE, this.publicKey);
+        return bytesToHex(cipher.doFinal(message.getBytes()));
+    }
+
+
+    public static byte[] hexStringToByteArray(String s) {
+        int len = s.length();
+        byte[] data = new byte[len / 2];
+        for (int i = 0; i < len; i += 2) {
+            data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)
+                    + Character.digit(s.charAt(i+1), 16));
+        }
+        return data;
+    }
+
+    private void setPublicKey(String publicKey) throws Exception{
+        X509EncodedKeySpec spec = new X509EncodedKeySpec(hexStringToByteArray(publicKey));
+        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+        this.publicKey = keyFactory.generatePublic(spec);
+    }
+
     public static String bytesToHex(byte[] bytes) {
+        char[] hexArray = "0123456789ABCDEF".toCharArray();
         char[] hexChars = new char[bytes.length * 2];
         for ( int j = 0; j < bytes.length; j++ ) {
             int v = bytes[j] & 0xFF;

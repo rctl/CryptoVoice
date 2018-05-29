@@ -24,22 +24,6 @@ public class Switchboard {
             //Create SSLSocket
             SSLServerSocket sslserversocket = (SSLServerSocket) sslContext.getServerSocketFactory().createServerSocket(1338);
 
-            //Backwards compatiability (remove later!!!)
-            //Allow unencrypted on other port (for old clients)
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        ServerSocket serverSocket = new ServerSocket(1337);
-                        while (true){
-                            new VoicePeer(serverSocket.accept()).start();
-                        }
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }   
-                }
-            }).start();     
-            
             while (true){
                 new VoicePeer((SSLSocket) sslserversocket.accept()).start();
             } 

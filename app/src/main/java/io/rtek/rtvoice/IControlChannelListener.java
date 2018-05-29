@@ -2,6 +2,7 @@ package io.rtek.rtvoice;
 
 import android.support.v4.util.Pair;
 
+import java.io.InputStream;
 import java.security.KeyStore;
 
 import javax.net.ssl.KeyManagerFactory;
@@ -23,6 +24,7 @@ public interface IControlChannelListener {
     void saveString(String key, String value);
     void ControlChannelConnected();
     void ControlChannelDisconnected();
-    Pair<TrustManagerFactory, KeyManagerFactory> getTrustManagerFactory();
+
+    InputStream getServerCertificate();
     String getGcmDeviceId();
 }
